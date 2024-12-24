@@ -43,31 +43,35 @@ const DataPreview: React.FC<DataPreviewProps> = ({ data, columns, onDataUpdate, 
   };
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
-      <div className="overflow-hidden border border-gray-200 rounded-lg">
-        <table className="min-w-full divide-y divide-gray-200">
+    <div className="bg-white rounded-lg shadow">
+      <div className="overflow-x-auto" style={{ width: '100%' }}>
+        <table className="min-w-full divide-y divide-gray-200" style={{ minWidth: '1200px' }}>
           <thead className="bg-gray-50">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column}
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                  style={{ minWidth: '150px' }}
                 >
                   {column}
                 </th>
               ))}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                Actions
-              </th>
+              {onRowDelete && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {currentData.map((row, rowIndex) => (
-              <tr key={rowIndex} className="hover:bg-gray-50">
+              <tr key={rowIndex}>
                 {columns.map((column) => (
                   <td
-                    key={column}
-                    className="px-6 py-3 text-sm text-gray-900 whitespace-nowrap cursor-pointer"
+                    key={`${rowIndex}-${column}`}
+                    className="px-6 py-4 whitespace-nowrap"
+                    style={{ minWidth: '150px' }}
                     onClick={() => handleEdit(rowIndex, column, row[column])}
                   >
                     {editingCell?.row === rowIndex && editingCell?.column === column ? (
@@ -77,86 +81,82 @@ const DataPreview: React.FC<DataPreviewProps> = ({ data, columns, onDataUpdate, 
                         onChange={(e) => setEditValue(e.target.value)}
                         onBlur={() => handleSave(rowIndex, column)}
                         onKeyDown={(e) => handleKeyPress(e, rowIndex, column)}
-                        className="w-full p-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full p-1 border rounded"
                         autoFocus
                       />
                     ) : (
-                      <span className="block w-full hover:bg-gray-50 rounded px-2 py-1 -mx-2 -my-1">
-                        {row[column]}
-                      </span>
+                      <span className="text-sm text-gray-900">{row[column]?.toString() || ''}</span>
                     )}
                   </td>
                 ))}
-                <td className="px-6 py-3 whitespace-nowrap text-sm text-right">
-                  <button
-                    onClick={() => onRowDelete?.(startIndex + rowIndex)}
-                    className="text-red-600 hover:text-red-900 hover:bg-red-50 rounded px-2 py-1 transition-colors duration-200"
-                  >
-                    Delete
-                  </button>
-                </td>
+                {onRowDelete && (
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      onClick={() => onRowDelete(startIndex + rowIndex)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
-        <div className="flex items-center justify-between">
+      <div className="bg-white px-6 py-4 flex items-center justify-between border-t border-gray-200">
+        <div className="flex items-center gap-2">
           <p className="text-sm text-gray-700">
             Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
             <span className="font-medium">{Math.min(endIndex, data.length)}</span> of{' '}
             <span className="font-medium">{data.length}</span> results
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1}
+            className="p-2 rounded-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+          >
+            <span>First</span>
+          </button>
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="p-2 rounded-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+          >
+            <span>Previous</span>
+          </button>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="sr-only">First Page</span>
-              ⟪
-            </button>
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="sr-only">Previous Page</span>
-              ←
-            </button>
-            <div className="flex items-center gap-1 px-2">
-              <input
-                type="number"
-                min={1}
-                max={totalPages}
-                value={currentPage}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value);
-                  if (value >= 1 && value <= totalPages) {
-                    setCurrentPage(value);
-                  }
-                }}
-                className="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              <span className="text-gray-500 text-sm">/ {totalPages}</span>
-            </div>
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="sr-only">Next Page</span>
-              →
-            </button>
-            <button
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="sr-only">Last Page</span>
-              ⟫
-            </button>
+            <input
+              type="number"
+              min={1}
+              max={totalPages}
+              value={currentPage}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                if (value >= 1 && value <= totalPages) {
+                  setCurrentPage(value);
+                }
+              }}
+              className="w-16 px-2 py-1 text-center border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <span className="text-gray-500">of {totalPages}</span>
           </div>
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="p-2 rounded-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+          >
+            <span>Next</span>
+          </button>
+          <button
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages}
+            className="p-2 rounded-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+          >
+            <span>Last</span>
+          </button>
         </div>
       </div>
     </div>

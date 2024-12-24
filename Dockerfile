@@ -16,11 +16,8 @@ COPY . .
 # Build the application
 RUN npm run build
 
-# Install serve to run the production build
-RUN npm install -g serve
+# Expose port 5173
+EXPOSE 5173
 
-# Expose port 3000
-EXPOSE 3000
-
-# Start the application
-CMD ["serve", "-s", "dist", "-l", "3000"]
+# Start the application with host flag
+CMD ["npm", "run", "dev", "--", "--host"]

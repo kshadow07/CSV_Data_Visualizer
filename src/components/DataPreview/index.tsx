@@ -45,7 +45,7 @@ export const DataPreview: React.FC<DataPreviewProps> = ({ data }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div style={{ width: '100%' }}>
       <h2 className="text-xl font-semibold mb-4">Data Preview</h2>
       <DataTable
         data={paginatedData}

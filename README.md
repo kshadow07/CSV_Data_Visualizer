@@ -1,39 +1,26 @@
 # CSV Data Visualizer
 
-A modern web application for visualizing and analyzing CSV data with interactive charts and data manipulation features.
+A modern web application for visualizing and analyzing CSV data with interactive charts, data cleaning tools, and statistical analysis.
 
 ## Features
 
-- **CSV File Upload**: Easily upload and parse CSV files
-- **Interactive Charts**: 
-  - Multiple chart types (Line, Bar, Area)
-  - Customizable chart colors
-  - Grid display toggle
-  - Dynamic data point visualization (20, 50, 100, or all points)
-- **Data Analysis**:
-  - Real-time data visualization
-  - X and Y axis customization
-  - Responsive design for all screen sizes
-- **Chart Customization**:
-  - Custom titles
-  - Adjustable data points display
-  - Interactive tooltips
-  - Dynamic resizing
+- Interactive data visualization with multiple chart types
+- Data preview with horizontal scrolling and modern pagination
+- Data cleaning and transformation tools
+- Statistical analysis
+- Export options for charts and data
+- Search and filter capabilities
+- Responsive design for all devices
 
-## Tech Stack
+## Getting Started
 
-- React
-- TypeScript
-- Tailwind CSS
-- Recharts
-- Vite
+### Prerequisites
 
-## Prerequisites
-
-- Node.js (v14 or higher)
+- Node.js >= 16
+- npm or yarn
 - Docker (optional, for containerized deployment)
 
-## Installation and Running Locally
+### Local Development
 
 1. Clone the repository:
 ```bash
@@ -44,16 +31,20 @@ cd CSV_Data_Visualizer
 2. Install dependencies:
 ```bash
 npm install
+# or
+yarn install
 ```
 
 3. Start the development server:
 ```bash
 npm run dev
+# or
+yarn dev
 ```
 
-4. Open your browser and navigate to `http://localhost:5173`
+The application will be available at `http://localhost:5173`
 
-## Running with Docker
+### Docker Deployment
 
 1. Build the Docker image:
 ```bash
@@ -62,26 +53,26 @@ docker build -t csv-visualizer .
 
 2. Run the container:
 ```bash
-docker run -p 80:80 csv-visualizer
+docker run -p 5173:5173 csv-visualizer
 ```
 
-3. Access the application at `http://localhost:80`
+The application will be available at `http://localhost:5173`
 
-## Usage
+#### Docker Configuration
 
-1. Launch the application
-2. Click on the upload button to select your CSV file
-3. Choose your preferred chart type (Line, Bar, or Area)
-4. Customize the visualization:
-   - Select X and Y axis data columns
-   - Choose chart color
-   - Toggle grid display
-   - Adjust number of visible data points
-5. Interact with the chart:
-   - Hover over data points for detailed information
-   - Use the data point controls to adjust the view
+The application uses the following Docker configuration:
 
-## Development
+- Base image: Node 16 Alpine for minimal size
+- Exposed port: 5173 (Vite's default port)
+- Production-optimized build
+- Host configuration for external access
+
+You can customize the port mapping when running the container:
+```bash
+docker run -p <host-port>:5173 csv-visualizer
+```
+
+## Development Commands
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production

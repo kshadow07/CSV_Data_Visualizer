@@ -19,17 +19,24 @@ export const DataTable: React.FC<DataTableProps> = ({
   const headers = Object.keys(data[0]);
 
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+    <div style={{ width: '100%', overflowX: 'auto' }}>
+      <table style={{ minWidth: '1500px' }}>
+        <thead>
           <tr>
             {headers.map((header) => (
               <th
                 key={header}
                 onClick={() => onSort(header)}
-                className="group px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                style={{
+                  padding: '12px',
+                  textAlign: 'left',
+                  whiteSpace: 'nowrap',
+                  backgroundColor: '#f9fafb',
+                  cursor: 'pointer',
+                  minWidth: '150px'
+                }}
               >
-                <div className="flex items-center space-x-1">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span>{header}</span>
                   {sortColumn === header ? (
                     sortDirection === 'asc' ? (
@@ -37,26 +44,31 @@ export const DataTable: React.FC<DataTableProps> = ({
                     ) : (
                       <ArrowDown className="h-4 w-4 text-blue-500" />
                     )
-                  ) : (
-                    <div className="flex flex-col opacity-0 group-hover:opacity-100">
-                      <ArrowUp className="h-3 w-3 -mb-1" />
-                      <ArrowDown className="h-3 w-3" />
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody>
           {data.map((row, index) => (
-            <tr key={index} className="hover:bg-gray-50">
+            <tr 
+              key={index}
+              style={{ 
+                borderBottom: '1px solid #e5e7eb',
+                backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9fafb'
+              }}
+            >
               {headers.map((header) => (
                 <td
                   key={`${index}-${header}`}
-                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                  style={{
+                    padding: '12px',
+                    whiteSpace: 'nowrap',
+                    minWidth: '150px'
+                  }}
                 >
-                  {row[header]}
+                  {row[header]?.toString() || ''}
                 </td>
               ))}
             </tr>
