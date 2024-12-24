@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChartConfig } from '../types';
 import { 
   BarChart, 
   LineChart, 
-  AreaChart
+  AreaChart,
+  Loader2
 } from 'lucide-react';
 
 interface ChartControlsProps {
@@ -17,11 +18,22 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
   columns,
   onConfigChange,
 }) => {
+  const [isLoading, setIsLoading] = useState(false);
   const chartTypes = [
     { type: 'line', icon: LineChart, label: 'Line Chart' },
     { type: 'bar', icon: BarChart, label: 'Bar Chart' },
     { type: 'area', icon: AreaChart, label: 'Area Chart' },
   ];
+
+  const handleApply = async () => {
+    setIsLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate loading
+      onConfigChange(config);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -101,6 +113,21 @@ export const ChartControls: React.FC<ChartControlsProps> = ({
           Show Grid Lines
         </label>
       </div>
+
+      <button
+        onClick={handleApply}
+        disabled={isLoading}
+        className="w-full flex items-center justify-center gap-2 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Applying Changes...</span>
+          </>
+        ) : (
+          <span>Apply Changes</span>
+        )}
+      </button>
     </div>
   );
 };

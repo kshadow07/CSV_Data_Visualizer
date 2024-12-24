@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import * as jStat from 'jstat';
+import { Loader2 } from 'lucide-react';
 // @ts-ignore
 const jStatInstance = jStat as any;
 
@@ -32,6 +33,8 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
   const rowsPerPage = 15;
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const testTypes = [
     { value: 'ttest', label: 'T-Test' },
@@ -55,77 +58,135 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
     }
   };
 
-  // Enhanced Data Transformations
-  const transformData = (column: string, type: TransformationType) => {
-    setIsTransformationView(true);
+  // Pre-calculate column statistics to avoid repeated calculations
+  const calculateColumnStats = useCallback((column: string) => {
     try {
-      const newData = data.map(row => {
-        const newRow = { ...row };
-        const value = parseFloat(row[column]);
+      const values = data
+        .map(row => parseFloat(row[column]))
+        .filter(val => !isNaN(val));
+
+      if (values.length === 0) {
+        throw new Error(`No valid numeric values found in column ${column}`);
+      }
+
+      const sum = values.reduce((a, b) => a + b, 0);
+      const mean = sum / values.length;
+      const std = Math.sqrt(
+        values.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / (values.length - 1)
+      );
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+
+      return { values, sum, mean, std, min, max };
+    } catch (error) {
+      console.error('Error calculating statistics:', error);
+      throw error;
+    }
+  }, [data]);
+
+  // Enhanced Data Transformations with optimizations
+  const transformData = async (column: string, type: TransformationType) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Calculate stats once for the column
+      const stats = await calculateColumnStats(column);
+      
+      // Process data in chunks to avoid UI freezing
+      const chunkSize = 1000;
+      const newData = [];
+      
+      for (let i = 0; i < data.length; i += chunkSize) {
+        await new Promise(resolve => setTimeout(resolve, 0)); // Allow UI to update
         
-        switch (type) {
-          case 'log':
-            newRow[column] = value > 0 ? Math.log(value) : Math.log(0.0001);
-            break;
-          case 'standardize': {
-            const values = data.map(r => parseFloat(r[column]));
-            const mean = jStatInstance.mean(values);
-            const std = jStatInstance.stdev(values, true);
-            newRow[column] = (value - mean) / (std || 1);
-            break;
+        const chunk = data.slice(i, i + chunkSize).map(row => {
+          const newRow = { ...row };
+          const value = parseFloat(row[column]);
+          
+          if (isNaN(value)) {
+            newRow[column] = null;
+            return newRow;
           }
-          case 'normalize': {
-            const values = data.map(r => parseFloat(r[column]));
-            const sum = jStatInstance.sum(values);
-            newRow[column] = sum !== 0 ? value / sum : 0;
-            break;
+
+          switch (type) {
+            case 'log':
+              newRow[column] = value > 0 ? Number(Math.log(value).toFixed(4)) : null;
+              break;
+            case 'standardize':
+              newRow[column] = stats.std !== 0 
+                ? Number(((value - stats.mean) / stats.std).toFixed(4))
+                : 0;
+              break;
+            case 'normalize':
+              newRow[column] = stats.sum !== 0 
+                ? Number((value / stats.sum).toFixed(4))
+                : 0;
+              break;
+            case 'minmax': {
+              const range = stats.max - stats.min;
+              newRow[column] = range !== 0 
+                ? Number(((value - stats.min) / range).toFixed(4))
+                : 0;
+              break;
+            }
+            default:
+              newRow[column] = value;
           }
-          case 'minmax': {
-            const values = data.map(r => parseFloat(r[column]));
-            const min = Math.min(...values);
-            const max = Math.max(...values);
-            const range = max - min;
-            newRow[column] = range !== 0 ? (value - min) / range : 0;
-            break;
-          }
-        }
-        return newRow;
-      });
+          return newRow;
+        });
+        
+        newData.push(...chunk);
+      }
 
       if (onTransformedDataChange) {
         onTransformedDataChange(newData);
       }
+      setIsTransformationView(true);
     } catch (error) {
       console.error('Error transforming data:', error);
-      alert('Error transforming data. Please check the values and try again.');
+      setError(error instanceof Error ? error.message : 'Error transforming data');
+      setIsTransformationView(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const resetTransformation = () => {
-    setIsTransformationView(false);
-    setTransformation('none');
-    setSelectedColumns([]);
-    setTestType('ttest');
-    setTestResults([]);
-    setGroupByColumn('');
-    setPivotMetric('count');
-    setCurrentPage(1);
+  const resetTransformation = useCallback(() => {
+    setIsLoading(true);
+    setError(null);
     
-    if (onTransformedDataChange && originalData) {
-      // Create a deep copy with exact numeric values preserved
-      const resetData = originalData.map(row => {
-        const newRow = { ...row };
-        // Ensure numeric values are preserved exactly
-        Object.keys(row).forEach(key => {
-          if (typeof row[key] === 'number') {
-            newRow[key] = Number(row[key]);
-          }
+    try {
+      setIsTransformationView(false);
+      setTransformation('none');
+      setSelectedColumns([]);
+      setTestType('ttest');
+      setTestResults([]);
+      setGroupByColumn('');
+      setPivotMetric('count');
+      setCurrentPage(1);
+      
+      if (onTransformedDataChange && originalData) {
+        // Create a deep copy with exact numeric values preserved
+        const resetData = originalData.map(row => {
+          const newRow = { ...row };
+          // Ensure numeric values are preserved exactly
+          Object.keys(row).forEach(key => {
+            if (typeof row[key] === 'number') {
+              newRow[key] = Number(row[key]);
+            }
+          });
+          return newRow;
         });
-        return newRow;
-      });
-      onTransformedDataChange(resetData);
+        onTransformedDataChange(resetData);
+      }
+    } catch (error) {
+      console.error('Error resetting transformation:', error);
+      setError(error instanceof Error ? error.message : 'Error resetting data');
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [originalData, onTransformedDataChange]);
 
   // Enhanced Statistical Tests
   const runStatisticalTest = () => {
@@ -400,28 +461,39 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
           </div>
           <div className="flex gap-2 sm:justify-end">
             <button
-              className="flex-1 sm:flex-none px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2 text-sm font-medium"
+              className="flex-1 sm:flex-none px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => {
                 if (!selectedColumns[0]) {
-                  alert('Please select a column to transform');
+                  setError('Please select a column to transform');
                   return;
                 }
                 if (transformation === 'none') {
-                  alert('Please select a transformation type');
+                  setError('Please select a transformation type');
                   return;
                 }
                 transformData(selectedColumns[0], transformation);
               }}
+              disabled={isLoading}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              Apply
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Applying...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <span>Apply</span>
+                </>
+              )}
             </button>
             {isTransformationView && (
               <button
-                className="flex-1 sm:flex-none px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2 text-sm font-medium"
+                className="flex-1 sm:flex-none px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={resetTransformation}
+                disabled={isLoading}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -430,6 +502,11 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
               </button>
             )}
           </div>
+          {error && (
+            <div className="mt-2 text-sm text-red-500">
+              {error}
+            </div>
+          )}
         </div>
       </div>
 
@@ -437,7 +514,7 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
       <div className="space-y-4">
         <h3 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
           <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4" />
           </svg>
           Pivot Table
         </h3>
