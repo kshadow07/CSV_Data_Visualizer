@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { jStat } from 'jstat'; // For statistical calculations
+import * as jStat from 'jstat';
+// @ts-ignore
+const jStatInstance = jStat as any;
 
 interface StatisticalAnalysisProps {
   data: any[];
@@ -28,6 +30,30 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
   const [currentPage, setCurrentPage] = useState(1);
   const [isTransformationView, setIsTransformationView] = useState(false);
   const rowsPerPage = 15;
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const testTypes = [
+    { value: 'ttest', label: 'T-Test' },
+    { value: 'chiSquare', label: 'Chi-Square Test' },
+    { value: 'correlation', label: 'Correlation Analysis' }
+  ];
+
+  const filteredColumns = columns.filter(column =>
+    column.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleColumnToggle = (column: string) => {
+    if (testType === 'ttest') {
+      setSelectedColumns([column]);
+    } else {
+      setSelectedColumns(prev =>
+        prev.includes(column)
+          ? prev.filter(col => col !== column)
+          : [...prev, column]
+      );
+    }
+  };
 
   // Enhanced Data Transformations
   const transformData = (column: string, type: TransformationType) => {
@@ -43,14 +69,14 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
             break;
           case 'standardize': {
             const values = data.map(r => parseFloat(r[column]));
-            const mean = jStat.mean(values);
-            const std = jStat.stdev(values, true);
+            const mean = jStatInstance.mean(values);
+            const std = jStatInstance.stdev(values, true);
             newRow[column] = (value - mean) / (std || 1);
             break;
           }
           case 'normalize': {
             const values = data.map(r => parseFloat(r[column]));
-            const sum = jStat.sum(values);
+            const sum = jStatInstance.sum(values);
             newRow[column] = sum !== 0 ? value / sum : 0;
             break;
           }
@@ -117,8 +143,8 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
           if (selectedColumns.length === 2) {
             const values2 = data.map(row => parseFloat(row[selectedColumns[1]]));
             // Two-sample t-test
-            const ttest = jStat.ttest(values1, values2);
-            const pValue = jStat.ttest(values1, values2, true);
+            const ttest = jStatInstance.ttest(values1, values2);
+            const pValue = jStatInstance.ttest(values1, values2, true);
             results.push({
               testName: 'Two-Sample T-Test',
               result: ttest,
@@ -127,8 +153,8 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
             });
           } else {
             // One-sample t-test against mean = 0
-            const ttest = jStat.ttest(values1, 0);
-            const pValue = jStat.ttest(values1, 0, true);
+            const ttest = jStatInstance.ttest(values1, 0);
+            const pValue = jStatInstance.ttest(values1, 0, true);
             results.push({
               testName: 'One-Sample T-Test',
               result: ttest,
@@ -153,7 +179,7 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
         case 'correlation': {
           if (selectedColumns.length === 2) {
             const values2 = data.map(row => parseFloat(row[selectedColumns[1]]));
-            const correlation = jStat.corrcoeff(values1, values2);
+            const correlation = jStatInstance.corrcoeff(values1, values2);
             results.push({
               testName: 'Pearson Correlation',
               result: correlation,
@@ -215,7 +241,7 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
     });
 
     degreesOfFreedom = (Object.keys(rowTotals).length - 1) * (Object.keys(colTotals).length - 1);
-    const pValue = 1 - jStat.chisquare.cdf(chiSquare, degreesOfFreedom);
+    const pValue = 1 - jStatInstance.chisquare.cdf(chiSquare, degreesOfFreedom);
 
     return { chiSquare, pValue };
   };
@@ -223,7 +249,7 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
   // Helper function for correlation p-value
   const calculateCorrelationPValue = (correlation: number, n: number) => {
     const t = correlation * Math.sqrt((n - 2) / (1 - correlation * correlation));
-    return 2 * (1 - jStat.studentt.cdf(Math.abs(t), n - 2));
+    return 2 * (1 - jStatInstance.studentt.cdf(Math.abs(t), n - 2));
   };
 
   // Enhanced Pivot Table calculation
@@ -273,8 +299,8 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
             const values = group[col].values;
             if (values && values.length > 0) {
               group[col].mean = group[col].sum / values.length;
-              group[col].median = jStat.median(values);
-              group[col].std = values.length > 1 ? jStat.stdev(values, true) : 0;
+              group[col].median = jStatInstance.median(values);
+              group[col].std = values.length > 1 ? jStatInstance.stdev(values, true) : 0;
             }
           }
         });
@@ -343,16 +369,18 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
           Data Transformation
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">Select Column</label>
             <select
-              className="w-full form-select px-3 py-2 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:border-blue-300 text-sm"
               value={selectedColumns[0] || ''}
               onChange={(e) => setSelectedColumns([e.target.value])}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value="">Select Column</option>
-              {columns.map(col => (
-                <option key={col} value={col}>{col}</option>
+              <option value="">Select a column...</option>
+              {columns.map(column => (
+                <option key={column} value={column}>
+                  {column}
+                </option>
               ))}
             </select>
           </div>
@@ -548,26 +576,82 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
               value={testType}
               onChange={(e) => setTestType(e.target.value as TestType)}
             >
-              <option value="ttest">T-Test</option>
-              <option value="chiSquare">Chi-Square Test</option>
-              <option value="correlation">Correlation Analysis</option>
+              {testTypes.map(type => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
             </select>
           </div>
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-gray-700">Select Columns</label>
-            <select
-              multiple
-              className="w-full form-multiselect px-3 py-2 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:border-blue-300 text-sm"
-              value={selectedColumns}
-              onChange={(e) => {
-                const selected = Array.from(e.target.selectedOptions, option => option.value);
-                setSelectedColumns(selected);
-              }}
-            >
-              {columns.map(col => (
-                <option key={col} value={col}>{col}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <div
+                className="w-full min-h-[42px] px-3 py-2 text-sm border border-gray-300 rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+              >
+                {selectedColumns.length === 0 ? (
+                  <span className="text-gray-500">Select columns...</span>
+                ) : (
+                  <div className="flex flex-wrap gap-1">
+                    {selectedColumns.map(column => (
+                      <span
+                        key={column}
+                        className="inline-flex items-center px-2 py-1 rounded-md bg-blue-100 text-blue-800 text-xs"
+                      >
+                        {column}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleColumnToggle(column);
+                          }}
+                          className="ml-1 hover:text-blue-900"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {dropdownOpen && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+                  <div className="p-2 border-b border-gray-200">
+                    <input
+                      type="text"
+                      placeholder="Search columns..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {filteredColumns.map(column => (
+                      <div
+                        key={column}
+                        className="flex items-center px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleColumnToggle(column);
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedColumns.includes(column)}
+                          onChange={() => {}}
+                          className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        />
+                        <label className="ml-2 text-sm text-gray-700 cursor-pointer">
+                          {column}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <button

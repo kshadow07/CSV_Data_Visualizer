@@ -108,77 +108,77 @@ const DataCleaningTools: React.FC<DataCleaningToolsProps> = ({ data, onDataUpdat
   };
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-3">
-        <h3 className="text-sm font-medium text-gray-900">Missing Values</h3>
-        <div className="flex flex-col gap-2">
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-sm font-medium text-gray-900 mb-3">Missing Values</h3>
+        <div className="space-y-2">
           <button
             onClick={handleFillMean}
-            className="text-left text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded px-2 py-1 transition-colors duration-200"
+            className="w-full text-left text-sm text-red-600 hover:text-red-700 bg-white hover:bg-red-50 border border-red-200 rounded-md px-3 py-2 transition-colors duration-200"
           >
             Fill with Mean
           </button>
           <button
             onClick={handleFillMedian}
-            className="text-left text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded px-2 py-1 transition-colors duration-200"
+            className="w-full text-left text-sm text-blue-600 hover:text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 rounded-md px-3 py-2 transition-colors duration-200"
           >
             Fill with Median
           </button>
           <button
             onClick={handleRemoveRows}
-            className="text-left text-sm text-green-600 hover:text-green-700 hover:bg-green-50 rounded px-2 py-1 transition-colors duration-200"
+            className="w-full text-left text-sm text-green-600 hover:text-green-700 bg-white hover:bg-green-50 border border-green-200 rounded-md px-3 py-2 transition-colors duration-200"
           >
             Remove Rows
           </button>
         </div>
       </div>
 
-      <div className="space-y-3">
-        <h3 className="text-sm font-medium text-gray-900">Duplicates</h3>
+      <div>
+        <h3 className="text-sm font-medium text-gray-900 mb-3">Duplicates</h3>
         <button
           onClick={handleRemoveDuplicates}
-          className="text-left text-sm text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded px-2 py-1 transition-colors duration-200 w-full"
+          className="w-full text-left text-sm text-orange-600 hover:text-orange-700 bg-white hover:bg-orange-50 border border-orange-200 rounded-md px-3 py-2 transition-colors duration-200"
         >
           Remove Duplicates
         </button>
       </div>
 
-      <div className="space-y-3">
-        <h3 className="text-sm font-medium text-gray-900">Statistical Analysis</h3>
-        <select 
-          className="w-full text-sm border border-gray-200 rounded px-2 py-1.5"
-          value={selectedColumn}
-          onChange={(e) => {
-            setSelectedColumn(e.target.value);
-            setMeanResult('');
-            setMedianResult('');
-          }}
-        >
-          <option value="">Select Column</option>
-          {columns.map(col => (
-            <option key={col} value={col}>{col}</option>
-          ))}
-        </select>
-        <div className="flex flex-col gap-2">
+      <div>
+        <h3 className="text-sm font-medium text-gray-900 mb-3">Statistical Analysis</h3>
+        <div className="space-y-2">
+          <select 
+            className="w-full text-sm border border-gray-200 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={selectedColumn}
+            onChange={(e) => {
+              setSelectedColumn(e.target.value);
+              setMeanResult('');
+              setMedianResult('');
+            }}
+          >
+            <option value="">Select Column</option>
+            {columns.map(col => (
+              <option key={col} value={col}>{col}</option>
+            ))}
+          </select>
           <button
             onClick={calculateMean}
-            className="text-left text-sm text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded px-2 py-1 transition-colors duration-200"
+            className="w-full text-left text-sm text-purple-600 hover:text-purple-700 bg-white hover:bg-purple-50 border border-purple-200 rounded-md px-3 py-2 transition-colors duration-200"
           >
             Calculate Mean
           </button>
           {meanResult && (
-            <div className="text-sm text-gray-600 px-2">
+            <div className="text-sm text-gray-600 bg-gray-50 rounded-md px-3 py-2 border border-gray-200">
               {meanResult}
             </div>
           )}
           <button
             onClick={calculateMedian}
-            className="text-left text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded px-2 py-1 transition-colors duration-200"
+            className="w-full text-left text-sm text-indigo-600 hover:text-indigo-700 bg-white hover:bg-indigo-50 border border-indigo-200 rounded-md px-3 py-2 transition-colors duration-200"
           >
             Calculate Median
           </button>
           {medianResult && (
-            <div className="text-sm text-gray-600 px-2">
+            <div className="text-sm text-gray-600 bg-gray-50 rounded-md px-3 py-2 border border-gray-200">
               {medianResult}
             </div>
           )}

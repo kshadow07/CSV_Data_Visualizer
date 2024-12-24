@@ -44,30 +44,30 @@ const DataPreview: React.FC<DataPreviewProps> = ({ data, columns, onDataUpdate, 
 
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
-      <div className="overflow-x-auto">
+      <div className="overflow-hidden border border-gray-200 rounded-lg">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                 >
                   {column}
                 </th>
               ))}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {currentData.map((row, rowIndex) => (
-              <tr key={rowIndex}>
+              <tr key={rowIndex} className="hover:bg-gray-50">
                 {columns.map((column) => (
                   <td
                     key={column}
-                    className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 cursor-pointer hover:bg-gray-50"
+                    className="px-6 py-3 text-sm text-gray-900 whitespace-nowrap cursor-pointer"
                     onClick={() => handleEdit(rowIndex, column, row[column])}
                   >
                     {editingCell?.row === rowIndex && editingCell?.column === column ? (
@@ -81,14 +81,16 @@ const DataPreview: React.FC<DataPreviewProps> = ({ data, columns, onDataUpdate, 
                         autoFocus
                       />
                     ) : (
-                      row[column]
+                      <span className="block w-full hover:bg-gray-50 rounded px-2 py-1 -mx-2 -my-1">
+                        {row[column]}
+                      </span>
                     )}
                   </td>
                 ))}
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td className="px-6 py-3 whitespace-nowrap text-sm text-right">
                   <button
                     onClick={() => onRowDelete?.(startIndex + rowIndex)}
-                    className="text-red-600 hover:text-red-900"
+                    className="text-red-600 hover:text-red-900 hover:bg-red-50 rounded px-2 py-1 transition-colors duration-200"
                   >
                     Delete
                   </button>
@@ -98,8 +100,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({ data, columns, onDataUpdate, 
           </tbody>
         </table>
       </div>
-      <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-        <div className="flex items-center gap-4">
+      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+        <div className="flex items-center justify-between">
           <p className="text-sm text-gray-700">
             Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
             <span className="font-medium">{Math.min(endIndex, data.length)}</span> of{' '}
@@ -109,7 +111,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ data, columns, onDataUpdate, 
             <button
               onClick={() => setCurrentPage(1)}
               disabled={currentPage === 1}
-              className="relative inline-flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="sr-only">First Page</span>
               ⟪
@@ -117,12 +119,12 @@ const DataPreview: React.FC<DataPreviewProps> = ({ data, columns, onDataUpdate, 
             <button
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
-              className="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="sr-only">Previous Page</span>
               ←
             </button>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 px-2">
               <input
                 type="number"
                 min={1}
@@ -141,7 +143,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ data, columns, onDataUpdate, 
             <button
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
-              className="relative inline-flex items-center px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="sr-only">Next Page</span>
               →
@@ -149,7 +151,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({ data, columns, onDataUpdate, 
             <button
               onClick={() => setCurrentPage(totalPages)}
               disabled={currentPage === totalPages}
-              className="relative inline-flex items-center px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="sr-only">Last Page</span>
               ⟫

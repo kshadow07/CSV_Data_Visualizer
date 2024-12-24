@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   LineChart,
   Line,
@@ -16,6 +16,7 @@ import {
 interface ChartProps {
   data: DataPoint[];
   config: ChartConfig;
+  onExport?: (format: 'png' | 'jpeg' | 'pdf') => Promise<void>;
 }
 
 interface DataPoint {
@@ -31,32 +32,38 @@ interface ChartConfig {
   showGrid?: boolean;
 }
 
-const Chart: React.FC<ChartProps> = ({ data, config }) => {
+const Chart: React.FC<ChartProps> = ({ data, config, onExport }) => {
   const chartColor = config.color || "#4f46e5";
-  const [visiblePoints, setVisiblePoints] = useState(50); // Default to showing 50 points
-  const [startIndex, setStartIndex] = useState(0); // Always start from the newest data
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [visiblePoints, setVisiblePoints] = useState(50);
+  const [startIndex, setStartIndex] = useState(0);
+  const chartRef = useRef<HTMLDivElement>(null);
   const [chartKey, setChartKey] = useState(0);
+  const maxPoints = data.length;
 
-  // Update startIndex and force re-render when data changes
   useEffect(() => {
     setStartIndex(0);
-    setChartKey(prev => prev + 1); // Force re-render
+    setVisiblePoints(Math.min(50, data.length));
+    setChartKey(prev => prev + 1);
   }, [data]);
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = parseInt(e.target.value);
-    setVisiblePoints(Math.max(10, Math.min(data.length, newValue)));
+    if (!isNaN(newValue)) {
+      const points = Math.max(10, Math.min(maxPoints, newValue));
+      setVisiblePoints(points);
+      // Adjust startIndex if needed to keep the visible range within bounds
+      if (startIndex + points > maxPoints) {
+        setStartIndex(Math.max(0, maxPoints - points));
+      }
+    }
   };
 
   const handleNavigationButton = (direction: 'left' | 'right') => {
-    const step = Math.max(1, Math.floor(visiblePoints * 0.5)); // Move by half the visible range
+    const step = Math.max(1, Math.floor(visiblePoints * 0.5));
     if (direction === 'left') {
-      // Left shows newer data
       setStartIndex(Math.max(0, startIndex - step));
     } else {
-      // Right shows older data
-      setStartIndex(Math.min(data.length - visiblePoints, startIndex + step));
+      setStartIndex(Math.min(maxPoints - visiblePoints, startIndex + step));
     }
   };
 
@@ -97,22 +104,23 @@ const Chart: React.FC<ChartProps> = ({ data, config }) => {
         </button>
 
         <div className="flex-1 flex items-center gap-4">
-          <span className="text-sm font-medium text-gray-700">Points:</span>
+          <span className="text-sm font-medium text-gray-700">Points: {visiblePoints}</span>
           <div className="flex-1 relative">
             <input
               type="range"
-              min="10"
-              max={data.length}
+              min={10}
+              max={maxPoints}
+              step={1}
               value={visiblePoints}
               onChange={handleSliderChange}
-              className="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-500"
+              className="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               style={{
-                background: `linear-gradient(to right, #3b82f6 ${(visiblePoints / data.length) * 100}%, #e5e7eb ${(visiblePoints / data.length) * 100}%)`
+                background: `linear-gradient(to right, #3b82f6 ${(visiblePoints / maxPoints) * 100}%, #e5e7eb ${(visiblePoints / maxPoints) * 100}%)`
               }}
             />
             <div className="absolute -top-6 left-0 w-full flex justify-center">
               <span className="text-sm font-medium text-gray-700 bg-white px-2 py-0.5 rounded-lg shadow-sm border">
-                {visiblePoints}
+                {visiblePoints} / {maxPoints}
               </span>
             </div>
           </div>
@@ -121,11 +129,11 @@ const Chart: React.FC<ChartProps> = ({ data, config }) => {
         <button
           onClick={() => handleNavigationButton('right')}
           className={`flex items-center justify-center p-2 rounded-lg transition-all duration-200 ${
-            startIndex >= data.length - visiblePoints
+            startIndex >= maxPoints - visiblePoints
             ? 'text-gray-300 bg-gray-100 cursor-not-allowed' 
             : 'text-blue-500 hover:bg-blue-50 active:bg-blue-100'
           }`}
-          disabled={startIndex >= data.length - visiblePoints}
+          disabled={startIndex >= maxPoints - visiblePoints}
           title="Older"
         >
           <svg 
@@ -187,10 +195,9 @@ const Chart: React.FC<ChartProps> = ({ data, config }) => {
   const renderChart = () => {
     const commonProps = {
       margin: { top: 10, right: 30, left: 0, bottom: 0 },
-      key: chartKey, // Add key to force re-render
+      key: chartKey, 
     };
 
-    // Get the data slice but don't reverse it - this will show oldest on left, newest on right
     const visibleData = data.slice(startIndex, startIndex + visiblePoints);
 
     switch (config.type) {
@@ -290,12 +297,28 @@ const Chart: React.FC<ChartProps> = ({ data, config }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {renderTitle()}
-      {renderControls()}
-      <div className="bg-white rounded-xl p-4 border border-gray-100">
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex space-x-2">
+          {onExport && (
+            <button
+              onClick={() => onExport('png')}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Export as PNG
+            </button>
+          )}
+        </div>
+      </div>
+      <div 
+        ref={chartRef}
+        data-chart-container
+        className="bg-white p-4 rounded-lg"
+      >
         {renderChart()}
       </div>
+      {renderControls()}
     </div>
   );
 };

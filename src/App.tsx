@@ -2,13 +2,12 @@ import { useRef, useState } from 'react';
 import { FileUpload } from './components/FileUpload';
 import { ChartControls } from './components/ChartControls';
 import Chart from './components/Chart';
-import { ExportOptions } from './components/ExportOptions';
-import { ErrorBoundary } from './components/ErrorBoundary';
 import DataCleaningTools from './components/DataCleaningTools';
 import StatisticalAnalysis from './components/StatisticalAnalysis';
 import DataPreview from './components/DataPreview';
 import { ChartConfig, DataPoint } from './types';
-import { FileSpreadsheet } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 function App() {
   const [data, setData] = useState<DataPoint[]>([]);
@@ -22,7 +21,8 @@ function App() {
     showGrid: true,
   });
   const [showStats, setShowStats] = useState(false);
-  const chartRef = useRef<HTMLDivElement>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState(false);
 
   const handleDataLoaded = (newData: DataPoint[]) => {
     // Ensure numeric values are properly stored
@@ -50,47 +50,114 @@ function App() {
     }
   };
 
+  const handleExport = async (format: 'png' | 'jpeg' | 'pdf') => {
+    if (!chartContainerRef.current || exporting) return;
+
+    try {
+      setExporting(true);
+      const element = chartContainerRef.current;
+      
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        onclone: (clonedDoc) => {
+          const clonedElement = clonedDoc.querySelector('[data-chart-container]');
+          if (clonedElement) {
+            clonedElement.className = 'bg-white p-4 rounded-lg';
+          }
+        }
+      });
+
+      if (format === 'pdf') {
+        const imgData = canvas.toDataURL('image/png', 1.0);
+        const pdf = new jsPDF({
+          orientation: 'landscape',
+          unit: 'px'
+        });
+        
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        
+        const widthRatio = pageWidth / canvas.width;
+        const heightRatio = pageHeight / canvas.height;
+        const ratio = Math.min(widthRatio, heightRatio);
+        
+        const centerX = (pageWidth - canvas.width * ratio) / 2;
+        const centerY = (pageHeight - canvas.height * ratio) / 2;
+        
+        pdf.addImage(imgData, 'PNG', centerX, centerY, canvas.width * ratio, canvas.height * ratio);
+        pdf.save(`chart-${Date.now()}.pdf`);
+      } else {
+        const link = document.createElement('a');
+        const timestamp = Date.now();
+        link.download = `chart-${timestamp}.${format === 'jpeg' ? 'jpg' : format}`;
+        link.href = canvas.toDataURL(`image/${format}`, 1.0);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (error) {
+      console.error('Error exporting chart:', error);
+      alert('Failed to export chart. Please try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const columns = data.length > 0 ? Object.keys(data[0]) : [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
-      <div className="max-w-[98%] mx-auto py-4 px-2 sm:px-4">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">CSV Data Visualizer</h1>
-              <p className="text-sm text-gray-500">Upload your CSV file and create beautiful, interactive visualizations</p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-[98%] mx-auto py-6">
+        {/* Header */}
+        <div className="bg-white shadow-sm rounded-lg px-6 py-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">CSV Data Visualizer</h1>
+                <p className="text-sm text-gray-500">Upload your CSV file and create beautiful, interactive visualizations</p>
+              </div>
             </div>
           </div>
         </div>
 
+        {/* Main Content */}
         {data.length === 0 ? (
-          <div className="max-w-xl mx-auto">
-            <div className="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200">
-              <FileUpload onDataLoaded={handleDataLoaded} />
-            </div>
+          <div className="bg-white shadow-sm rounded-lg p-6">
+            <FileUpload onDataLoaded={handleDataLoaded} />
           </div>
         ) : (
-          <div className="space-y-4 sm:space-y-6">
-            {/* Data Preview and Cleaning Section */}
+          <div className="space-y-6">
+            {/* Data Tools and Preview */}
             <div className="grid grid-cols-12 gap-6">
               {/* Data Cleaning Tools */}
-              <div className="col-span-3 bg-white rounded-lg shadow p-4">
-                <DataCleaningTools
-                  data={data}
-                  onDataUpdate={(newData) => {
-                    setData(newData);
-                    setOriginalData(newData);
-                  }}
-                  columns={columns}
-                />
+              <div className="col-span-3">
+                <div className="bg-white shadow-sm rounded-lg p-6 h-full">
+                  <h2 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    </svg>
+                    Data Tools
+                  </h2>
+                  <DataCleaningTools
+                    data={data}
+                    onDataUpdate={(newData) => {
+                      setData(newData);
+                      setOriginalData(newData);
+                    }}
+                    columns={columns}
+                  />
+                </div>
               </div>
+
               {/* Data Preview */}
               <div className="col-span-9">
-                <div className="mb-6">
+                <div className="bg-white shadow-sm rounded-lg p-6">
                   <h2 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
                     <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -116,7 +183,13 @@ function App() {
             </div>
 
             {/* Chart Section */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-shadow duration-200" ref={chartRef}>
+            <div className="bg-white shadow-sm rounded-lg p-6">
+              <h2 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                </svg>
+                Chart Visualization
+              </h2>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex-1 space-y-4">
                   <div className="flex items-center justify-between">
@@ -132,10 +205,34 @@ function App() {
                       >
                         {showStats ? 'Hide Statistics' : 'Show Statistics'}
                       </button>
-                      <ExportOptions chartRef={chartRef} />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleExport('png')}
+                          disabled={exporting}
+                          className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 shadow-sm text-xs sm:text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Export as PNG
+                        </button>
+                        <button
+                          onClick={() => handleExport('jpeg')}
+                          disabled={exporting}
+                          className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 shadow-sm text-xs sm:text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Export as JPEG
+                        </button>
+                        <button
+                          onClick={() => handleExport('pdf')}
+                          disabled={exporting}
+                          className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 shadow-sm text-xs sm:text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Export as PDF
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <Chart data={data} config={config} />
+                  <div ref={chartContainerRef} className="bg-white p-4 rounded-lg">
+                    <Chart data={data} config={config} />
+                  </div>
                 </div>
 
                 <div className="w-full lg:w-64 xl:w-72 bg-gray-50 rounded-lg p-4">
