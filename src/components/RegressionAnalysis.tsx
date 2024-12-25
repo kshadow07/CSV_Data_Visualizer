@@ -121,7 +121,6 @@ export const RegressionAnalysis: React.FC<RegressionAnalysisProps> = ({
   const [processedData, setProcessedData] = useState<Array<{ x: number; y: number }>>([]);
   const [displayData, setDisplayData] = useState<Array<{ x: number; y: number }>>([]);
   const [scatterData, setScatterData] = useState<Array<{ x: number; y: number }>>([]);
-  const [transformedData, setTransformedData] = useState<any[]>([]);
   const [regressionResult, setRegressionResult] = useState<RegressionResult>({
     slope: 0,
     intercept: 0,
@@ -149,8 +148,8 @@ export const RegressionAnalysis: React.FC<RegressionAnalysisProps> = ({
           sampleData: data.slice(0, 3)
         });
 
-        // Use transformed data if available, otherwise use original data
-        const sourceData = transformedData.length > 0 ? transformedData : data;
+        // Use original data since transformed data feature is not implemented
+        const sourceData = data;
         
         // Process full data for calculations
         const processedPoints = sourceData
@@ -197,7 +196,7 @@ export const RegressionAnalysis: React.FC<RegressionAnalysisProps> = ({
         console.error('Error processing data:', error);
       }
     }
-  }, [data, selectedXColumn, selectedYColumn, visualizationData, transformedData]);
+  }, [data, selectedXColumn, selectedYColumn, visualizationData]);
 
   useEffect(() => {
     if (processedData.length > 0) {
