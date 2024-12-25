@@ -12,7 +12,9 @@ import { RegressionAnalysis } from './components/RegressionAnalysis';
 
 function App() {
   const [data, setData] = useState<DataPoint[]>([]);
+  const [visualizationData, setVisualizationData] = useState<DataPoint[]>([]);
   const [originalData, setOriginalData] = useState<DataPoint[]>([]);
+  const [transformedData, setTransformedData] = useState<DataPoint[]>([]);
   const [config, setConfig] = useState<ChartConfig>({
     type: 'line',
     xAxis: '',
@@ -26,8 +28,8 @@ function App() {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
 
-  const handleDataLoaded = (newData: DataPoint[]) => {
-    const processedData = newData.map(row => {
+  const handleDataLoaded = ({ fullData, visualizationData }: { fullData: DataPoint[], visualizationData: DataPoint[] }) => {
+    const processData = (data: DataPoint[]) => data.map(row => {
       const newRow = { ...row };
       Object.keys(row).forEach(key => {
         const value = row[key];
@@ -38,11 +40,15 @@ function App() {
       return newRow;
     });
     
-    setData(processedData);
-    setOriginalData(processedData);
+    const processedFullData = processData(fullData);
+    const processedVisualizationData = processData(visualizationData);
     
-    if (processedData.length > 0) {
-      const columns = Object.keys(processedData[0]);
+    setData(processedFullData);
+    setVisualizationData(processedVisualizationData);
+    setOriginalData(processedFullData);
+    
+    if (processedFullData.length > 0) {
+      const columns = Object.keys(processedFullData[0]);
       setConfig(prev => ({
         ...prev,
         xAxis: columns[0],
@@ -238,10 +244,11 @@ function App() {
                     </div>
                   </div>
                   <div ref={chartContainerRef} data-chart-container className="bg-white p-4 rounded-lg shadow">
-                    <Chart data={data} config={config} />
+                    <Chart data={transformedData.length > 0 ? transformedData : visualizationData} config={config} />
                     {showRegression && (
                       <RegressionAnalysis
                         data={data}
+                        visualizationData={transformedData.length > 0 ? transformedData : visualizationData}
                         selectedXColumn={config.xAxis}
                         selectedYColumn={config.yAxis}
                       />
@@ -264,8 +271,10 @@ function App() {
                   <StatisticalAnalysis
                     data={data}
                     originalData={originalData}
-                    onTransformedDataChange={setData}
                     columns={Object.keys(data[0])}
+                    onTransform={(newData) => {
+                      setTransformedData(newData);
+                    }}
                   />
                 </div>
               )}

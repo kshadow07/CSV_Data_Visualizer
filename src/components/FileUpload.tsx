@@ -5,11 +5,23 @@ import Papa from 'papaparse';
 import { DataPoint } from '../types';
 
 interface FileUploadProps {
-  onDataLoaded: (data: DataPoint[]) => void;
+  onDataLoaded: (data: { fullData: DataPoint[], visualizationData: DataPoint[] }) => void;
 }
+
+// Constants for file size and row limits
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+const MAX_ROW_COUNT = 100000;
+const MAX_VISUALIZATION_POINTS = 10000; // Maximum points to display in visualization
 
 export const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
   const [error, setError] = useState<string | null>(null);
+
+  const downsampleData = (data: DataPoint[], targetSize: number): DataPoint[] => {
+    if (data.length <= targetSize) return data;
+    
+    const step = Math.ceil(data.length / targetSize);
+    return data.filter((_, index) => index % step === 0);
+  };
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setError(null);
@@ -17,6 +29,12 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
     
     if (!file) {
       setError('Please select a CSV file');
+      return;
+    }
+
+    // Check file size
+    if (file.size > MAX_FILE_SIZE) {
+      setError(`File size exceeds the maximum limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
       return;
     }
 
@@ -36,6 +54,12 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
           return;
         }
 
+        // Check row count
+        if (results.data.length > MAX_ROW_COUNT) {
+          setError(`File exceeds the maximum limit of ${MAX_ROW_COUNT.toLocaleString()} rows`);
+          return;
+        }
+
         try {
           // Validate data structure
           const parsedData = results.data as DataPoint[];
@@ -48,7 +72,14 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onDataLoaded }) => {
             throw new Error('No data found in CSV');
           }
 
-          onDataLoaded(parsedData);
+          // Downsample data for visualization if necessary
+          const visualizationData = downsampleData(parsedData, MAX_VISUALIZATION_POINTS);
+          
+          // Pass both full data and downsampled data
+          onDataLoaded({
+            fullData: parsedData,
+            visualizationData: visualizationData
+          });
         } catch (err) {
           console.error('Data processing error:', err);
           setError('Error processing CSV data. Please check the file format.');

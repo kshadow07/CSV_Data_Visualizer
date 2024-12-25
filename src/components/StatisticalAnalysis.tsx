@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import * as jStat from 'jstat';
 import { Loader2 } from 'lucide-react';
 // @ts-ignore
@@ -8,7 +8,7 @@ interface StatisticalAnalysisProps {
   data: any[];
   originalData: any[];
   columns: string[];
-  onTransformedDataChange?: (newData: any[]) => void;
+  onTransform?: (transformedData: any[]) => void;
 }
 
 type TransformationType = 'none' | 'log' | 'standardize' | 'normalize' | 'minmax';
@@ -21,7 +21,12 @@ interface TestResult {
   description: string;
 }
 
-const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, originalData, columns, onTransformedDataChange }) => {
+const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ 
+  data, 
+  originalData, 
+  columns,
+  onTransform 
+}) => {
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [transformation, setTransformation] = useState<TransformationType>('none');
   const [testType, setTestType] = useState<TestType>('ttest');
@@ -35,6 +40,7 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [transformedData, setTransformedData] = useState(data);
 
   const testTypes = [
     { value: 'ttest', label: 'T-Test' },
@@ -61,7 +67,7 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
   // Pre-calculate column statistics to avoid repeated calculations
   const calculateColumnStats = useCallback((column: string) => {
     try {
-      const values = data
+      const values = transformedData
         .map(row => parseFloat(row[column]))
         .filter(val => !isNaN(val));
 
@@ -82,7 +88,7 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
       console.error('Error calculating statistics:', error);
       throw error;
     }
-  }, [data]);
+  }, [transformedData]);
 
   // Enhanced Data Transformations with optimizations
   const transformData = async (column: string, type: TransformationType) => {
@@ -90,17 +96,27 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
     setError(null);
 
     try {
+      if (!column || type === 'none') {
+        throw new Error('Please select both a column and transformation type');
+      }
+
+      console.log('Starting data transformation:', { column, type });
+      
+      // Create a copy of the data to transform
+      let dataToTransform = [...data];
+      
       // Calculate stats once for the column
       const stats = await calculateColumnStats(column);
+      console.log('Column statistics calculated:', stats);
       
       // Process data in chunks to avoid UI freezing
       const chunkSize = 1000;
       const newData = [];
       
-      for (let i = 0; i < data.length; i += chunkSize) {
+      for (let i = 0; i < dataToTransform.length; i += chunkSize) {
         await new Promise(resolve => setTimeout(resolve, 0)); // Allow UI to update
         
-        const chunk = data.slice(i, i + chunkSize).map(row => {
+        const chunk = dataToTransform.slice(i, i + chunkSize).map(row => {
           const newRow = { ...row };
           const value = parseFloat(row[column]);
           
@@ -137,12 +153,23 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
         });
         
         newData.push(...chunk);
+        console.log(`Processed chunk ${i/chunkSize + 1}, size: ${chunk.length}`);
       }
 
-      if (onTransformedDataChange) {
-        onTransformedDataChange(newData);
-      }
+      console.log('Transformation complete, updating data...');
+      
+      // Update the local state with transformed data
+      setTransformedData(newData);
       setIsTransformationView(true);
+      
+      // Notify parent component about the transformation
+      if (onTransform) {
+        onTransform(newData);
+      }
+      
+      // Auto-select the transformed column
+      setSelectedColumns([column]);
+      
     } catch (error) {
       console.error('Error transforming data:', error);
       setError(error instanceof Error ? error.message : 'Error transforming data');
@@ -166,27 +193,21 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
       setPivotMetric('count');
       setCurrentPage(1);
       
-      if (onTransformedDataChange && originalData) {
-        // Create a deep copy with exact numeric values preserved
-        const resetData = originalData.map(row => {
-          const newRow = { ...row };
-          // Ensure numeric values are preserved exactly
-          Object.keys(row).forEach(key => {
-            if (typeof row[key] === 'number') {
-              newRow[key] = Number(row[key]);
-            }
-          });
-          return newRow;
-        });
-        onTransformedDataChange(resetData);
+      // Reset to original data
+      setTransformedData(originalData);
+      
+      // Notify parent component about the reset
+      if (onTransform) {
+        onTransform(originalData);
       }
+      
     } catch (error) {
       console.error('Error resetting transformation:', error);
       setError(error instanceof Error ? error.message : 'Error resetting data');
     } finally {
       setIsLoading(false);
     }
-  }, [originalData, onTransformedDataChange]);
+  }, [originalData, onTransform]);
 
   // Enhanced Statistical Tests
   const runStatisticalTest = () => {
@@ -196,13 +217,13 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
     }
 
     const results: TestResult[] = [];
-    const values1 = data.map(row => parseFloat(row[selectedColumns[0]]));
+    const values1 = transformedData.map(row => parseFloat(row[selectedColumns[0]]));
 
     try {
       switch (testType) {
         case 'ttest': {
           if (selectedColumns.length === 2) {
-            const values2 = data.map(row => parseFloat(row[selectedColumns[1]]));
+            const values2 = transformedData.map(row => parseFloat(row[selectedColumns[1]]));
             // Two-sample t-test
             const ttest = jStatInstance.ttest(values1, values2);
             const pValue = jStatInstance.ttest(values1, values2, true);
@@ -239,7 +260,7 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
         }
         case 'correlation': {
           if (selectedColumns.length === 2) {
-            const values2 = data.map(row => parseFloat(row[selectedColumns[1]]));
+            const values2 = transformedData.map(row => parseFloat(row[selectedColumns[1]]));
             const correlation = jStatInstance.corrcoeff(values1, values2);
             results.push({
               testName: 'Pearson Correlation',
@@ -262,7 +283,7 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
   // Helper function for chi-square test
   const calculateFrequencies = (columns: string[]) => {
     const frequencies: { [key: string]: { [key: string]: number } } = {};
-    data.forEach(row => {
+    transformedData.forEach(row => {
       const val1 = row[columns[0]].toString();
       const val2 = columns[1] ? row[columns[1]].toString() : 'count';
       
@@ -315,12 +336,12 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
 
   // Enhanced Pivot Table calculation
   const calculatePivotTable = () => {
-    if (!groupByColumn || !data || data.length === 0) return null;
+    if (!groupByColumn || !transformedData || transformedData.length === 0) return null;
 
     const pivotData: { [key: string]: any } = {};
     
     try {
-      data.forEach(row => {
+      transformedData.forEach(row => {
         if (!row || !row[groupByColumn]) return;
 
         const groupValue = row[groupByColumn].toString();
@@ -419,6 +440,16 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
     return rangeWithDots;
   };
 
+  useEffect(() => {
+    if (selectedColumns.length > 0) {
+      // Update chart config to show transformed column
+    }
+  }, [selectedColumns]);
+
+  useEffect(() => {
+    setTransformedData(data);
+  }, [data]);
+
   return (
     <div className="space-y-6">
       {/* Data Transformation Section */}
@@ -434,7 +465,10 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
             <label className="block text-sm font-medium text-gray-700">Select Column</label>
             <select
               value={selectedColumns[0] || ''}
-              onChange={(e) => setSelectedColumns([e.target.value])}
+              onChange={(e) => {
+                setSelectedColumns([e.target.value]);
+                setError(null);
+              }}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Select a column...</option>
@@ -450,7 +484,10 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
             <select
               className="w-full form-select px-3 py-2 rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:border-blue-300 text-sm"
               value={transformation}
-              onChange={(e) => setTransformation(e.target.value as TransformationType)}
+              onChange={(e) => {
+                setTransformation(e.target.value as TransformationType);
+                setError(null);
+              }}
             >
               <option value="none">No Transformation</option>
               <option value="log">Log Transform</option>
@@ -471,9 +508,10 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
                   setError('Please select a transformation type');
                   return;
                 }
+                console.log('Applying transformation:', { column: selectedColumns[0], type: transformation });
                 transformData(selectedColumns[0], transformation);
               }}
-              disabled={isLoading}
+              disabled={isLoading || !selectedColumns[0] || transformation === 'none'}
             >
               {isLoading ? (
                 <>
@@ -556,7 +594,7 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">#</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">{groupByColumn}</th>
-                    {columns.filter(col => data[0] && !isNaN(parseFloat(data[0][col]))).map(col => (
+                    {columns.filter(col => transformedData[0] && !isNaN(parseFloat(transformedData[0][col]))).map(col => (
                       <th key={col} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                         {`${col} (${pivotMetric})`}
                       </th>
@@ -570,7 +608,7 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({ data, origina
                         {(currentPage - 1) * rowsPerPage + index + 1}
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-900 whitespace-nowrap">{key}</td>
-                      {columns.filter(col => data[0] && !isNaN(parseFloat(data[0][col]))).map(col => (
+                      {columns.filter(col => transformedData[0] && !isNaN(parseFloat(transformedData[0][col]))).map(col => (
                         <td key={col} className="px-4 py-2 text-sm text-gray-900 whitespace-nowrap">
                           {values[col] ? 
                             (pivotMetric === 'count' ? values[col].count :

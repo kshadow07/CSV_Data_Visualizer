@@ -6,6 +6,7 @@ interface RegressionAnalysisProps {
   data: any[];
   selectedXColumn: string;
   selectedYColumn: string;
+  visualizationData?: any[]; // Optional visualization data for display
 }
 
 // Utility functions for regression calculations
@@ -115,8 +116,12 @@ export const RegressionAnalysis: React.FC<RegressionAnalysisProps> = ({
   data,
   selectedXColumn,
   selectedYColumn,
+  visualizationData
 }) => {
   const [processedData, setProcessedData] = useState<Array<{ x: number; y: number }>>([]);
+  const [displayData, setDisplayData] = useState<Array<{ x: number; y: number }>>([]);
+  const [scatterData, setScatterData] = useState<Array<{ x: number; y: number }>>([]);
+  const [transformedData, setTransformedData] = useState<any[]>([]);
   const [regressionResult, setRegressionResult] = useState<RegressionResult>({
     slope: 0,
     intercept: 0,
@@ -144,16 +149,28 @@ export const RegressionAnalysis: React.FC<RegressionAnalysisProps> = ({
           sampleData: data.slice(0, 3)
         });
 
-        const processedPoints = data
+        // Use transformed data if available, otherwise use original data
+        const sourceData = transformedData.length > 0 ? transformedData : data;
+        
+        // Process full data for calculations
+        const processedPoints = sourceData
           .map(item => ({
             x: parseValue(item[selectedXColumn]) ?? 0,
             y: parseValue(item[selectedYColumn]) ?? 0
           }))
           .filter(point => !isNaN(point.x) && !isNaN(point.y));
 
-        // Set initial ranges
-        const xValues = processedPoints.map(p => p.x);
-        const yValues = processedPoints.map(p => p.y);
+        // Process visualization data for display
+        const displayPoints = (visualizationData || sourceData)
+          .map(item => ({
+            x: parseValue(item[selectedXColumn]) ?? 0,
+            y: parseValue(item[selectedYColumn]) ?? 0
+          }))
+          .filter(point => !isNaN(point.x) && !isNaN(point.y));
+
+        // Set initial ranges based on display data
+        const xValues = displayPoints.map(p => p.x);
+        const yValues = displayPoints.map(p => p.y);
         const newXRange = {
           min: Math.min(...xValues),
           max: Math.max(...xValues)
@@ -168,22 +185,32 @@ export const RegressionAnalysis: React.FC<RegressionAnalysisProps> = ({
         setCurrentYRange(newYRange);
 
         setProcessedData(processedPoints);
+        setDisplayData(displayPoints);
 
         console.log('Processed data:', {
           originalLength: data.length,
           processedLength: processedPoints.length,
+          displayLength: displayPoints.length,
           sampleProcessed: processedPoints.slice(0, 3)
         });
       } catch (error) {
         console.error('Error processing data:', error);
       }
     }
-  }, [data, selectedXColumn, selectedYColumn]);
+  }, [data, selectedXColumn, selectedYColumn, visualizationData, transformedData]);
 
   useEffect(() => {
     if (processedData.length > 0) {
       try {
-        // Filter data based on current ranges
+        // Filter display data based on current ranges
+        const filteredDisplayData = displayData.filter(point => 
+          point.x >= currentXRange.min && 
+          point.x <= currentXRange.max && 
+          point.y >= currentYRange.min && 
+          point.y <= currentYRange.max
+        );
+
+        // Calculate regression using full data within the range
         const filteredData = processedData.filter(point => 
           point.x >= currentXRange.min && 
           point.x <= currentXRange.max && 
@@ -200,17 +227,13 @@ export const RegressionAnalysis: React.FC<RegressionAnalysisProps> = ({
         const result = calculateRegression(filteredData);
         setRegressionResult(result);
 
-        console.log('Initial calculations:', {
-          slope: result.slope,
-          intercept: result.intercept,
-          rSquared: result.rSquared,
-          correlation: result.correlation
-        });
-      } catch (error) {
-        console.error('Error calculating regression:', error);
+        // Update scatter plot with display data
+        setScatterData(filteredDisplayData);
+      } catch (err) {
+        console.error('Data processing error:', err);
       }
     }
-  }, [processedData, currentXRange, currentYRange]);
+  }, [processedData, displayData, currentXRange, currentYRange]);
 
   if (!data?.length) {
     return (
@@ -266,7 +289,7 @@ export const RegressionAnalysis: React.FC<RegressionAnalysisProps> = ({
               <input
                 type="number"
                 value={currentXRange.min}
-                onChange={(e) => setCurrentXRange(prev => ({ ...prev, min: Number(e.target.value) }))}
+                onChange={(e) => setCurrentXRange(prev => ({ ...prev, min: Number(e.target.value) }))} 
                 className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 step="any"
               />
@@ -276,7 +299,7 @@ export const RegressionAnalysis: React.FC<RegressionAnalysisProps> = ({
               <input
                 type="number"
                 value={currentXRange.max}
-                onChange={(e) => setCurrentXRange(prev => ({ ...prev, max: Number(e.target.value) }))}
+                onChange={(e) => setCurrentXRange(prev => ({ ...prev, max: Number(e.target.value) }))} 
                 className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 step="any"
               />
@@ -305,7 +328,7 @@ export const RegressionAnalysis: React.FC<RegressionAnalysisProps> = ({
               <input
                 type="number"
                 value={currentYRange.min}
-                onChange={(e) => setCurrentYRange(prev => ({ ...prev, min: Number(e.target.value) }))}
+                onChange={(e) => setCurrentYRange(prev => ({ ...prev, min: Number(e.target.value) }))} 
                 className="w-full px-3 py-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 step="any"
               />
@@ -315,7 +338,7 @@ export const RegressionAnalysis: React.FC<RegressionAnalysisProps> = ({
               <input
                 type="number"
                 value={currentYRange.max}
-                onChange={(e) => setCurrentYRange(prev => ({ ...prev, max: Number(e.target.value) }))}
+                onChange={(e) => setCurrentYRange(prev => ({ ...prev, max: Number(e.target.value) }))} 
                 className="w-full px-3 py-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 step="any"
               />
@@ -435,7 +458,7 @@ export const RegressionAnalysis: React.FC<RegressionAnalysisProps> = ({
                 />
                 <Scatter
                   name="Data Points"
-                  data={processedData}
+                  data={scatterData}
                   fill="#8B5CF6"
                   fillOpacity={0.6}
                   shape="circle"

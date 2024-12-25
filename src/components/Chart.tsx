@@ -82,11 +82,7 @@ const Chart: React.FC<ChartProps> = ({ data, config, onExport }) => {
       <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-xl">
         <button
           onClick={() => handleNavigationButton('left')}
-          className={`flex items-center justify-center p-2 rounded-lg transition-all duration-200 ${
-            startIndex <= 0
-            ? 'text-gray-300 bg-gray-100 cursor-not-allowed' 
-            : 'text-blue-500 hover:bg-blue-50 active:bg-blue-100'
-          }`}
+          className={`btn-secondary ${startIndex <= 0 ? 'disabled' : ''}`}
           disabled={startIndex <= 0}
           title="Newer"
         >
@@ -129,11 +125,7 @@ const Chart: React.FC<ChartProps> = ({ data, config, onExport }) => {
 
         <button
           onClick={() => handleNavigationButton('right')}
-          className={`flex items-center justify-center p-2 rounded-lg transition-all duration-200 ${
-            startIndex >= maxPoints - visiblePoints
-            ? 'text-gray-300 bg-gray-100 cursor-not-allowed' 
-            : 'text-blue-500 hover:bg-blue-50 active:bg-blue-100'
-          }`}
+          className={`btn-secondary ${startIndex >= maxPoints - visiblePoints ? 'disabled' : ''}`}
           disabled={startIndex >= maxPoints - visiblePoints}
           title="Older"
         >
@@ -158,7 +150,7 @@ const Chart: React.FC<ChartProps> = ({ data, config, onExport }) => {
             setVisiblePoints(Math.min(20, data.length));
             setStartIndex(0);
           }}
-          className="px-3 py-2 text-sm font-medium bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors duration-200"
+          className="btn-secondary"
         >
           Last 20
         </button>
@@ -167,7 +159,7 @@ const Chart: React.FC<ChartProps> = ({ data, config, onExport }) => {
             setVisiblePoints(Math.min(50, data.length));
             setStartIndex(0);
           }}
-          className="px-3 py-2 text-sm font-medium bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors duration-200"
+          className="btn-secondary"
         >
           Last 50
         </button>
@@ -176,7 +168,7 @@ const Chart: React.FC<ChartProps> = ({ data, config, onExport }) => {
             setVisiblePoints(Math.min(100, data.length));
             setStartIndex(0);
           }}
-          className="px-3 py-2 text-sm font-medium bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors duration-200"
+          className="btn-secondary"
         >
           Last 100
         </button>
@@ -185,7 +177,7 @@ const Chart: React.FC<ChartProps> = ({ data, config, onExport }) => {
             setVisiblePoints(data.length);
             setStartIndex(0);
           }}
-          className="px-3 py-2 text-sm font-medium bg-gray-50 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition-colors duration-200"
+          className="btn-secondary"
         >
           All
         </button>
@@ -426,18 +418,6 @@ const Chart: React.FC<ChartProps> = ({ data, config, onExport }) => {
     <div className="space-y-4">
       {renderTitle()}
       {renderRangeControls()}
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex space-x-2">
-          {onExport && (
-            <button
-              onClick={() => onExport('png')}
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Export as PNG
-            </button>
-          )}
-        </div>
-      </div>
       <div 
         ref={chartRef}
         data-chart-container
