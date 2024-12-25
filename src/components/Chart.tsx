@@ -38,7 +38,6 @@ const Chart: React.FC<ChartProps> = ({ data, config, onExport }) => {
   const [visiblePoints, setVisiblePoints] = useState(100);
   const [startIndex, setStartIndex] = useState(0);
   const chartRef = useRef<HTMLDivElement>(null);
-  const [chartKey, setChartKey] = useState(0);
   const maxPoints = data.length;
   const [yAxisMin, setYAxisMin] = useState<number | null>(null);
   const [yAxisMax, setYAxisMax] = useState<number | null>(null);
@@ -46,7 +45,6 @@ const Chart: React.FC<ChartProps> = ({ data, config, onExport }) => {
   useEffect(() => {
     setStartIndex(0);
     setVisiblePoints(Math.min(100, data.length));
-    setChartKey(prev => prev + 1);
   }, [data]);
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
