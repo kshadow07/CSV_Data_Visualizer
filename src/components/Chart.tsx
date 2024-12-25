@@ -33,7 +33,7 @@ interface ChartConfig {
   showGrid?: boolean;
 }
 
-const Chart: React.FC<ChartProps> = ({ data, config, onExport }) => {
+const Chart: React.FC<ChartProps> = ({ data, config }) => {
   const chartColor = config.color || "#4f46e5";
   const [visiblePoints, setVisiblePoints] = useState(100);
   const [startIndex, setStartIndex] = useState(0);
