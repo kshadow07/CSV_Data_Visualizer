@@ -92,6 +92,3 @@ docker run -p <host-port>:5173 csv-visualizer
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Try it Online
-
-[Edit in StackBlitz ⚡️](https://stackblitz.com/~/github.com/kshadow07/CSV_Data_Visualizer)
