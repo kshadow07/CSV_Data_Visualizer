@@ -425,6 +425,7 @@ export const RegressionAnalysis: React.FC<RegressionAnalysisProps> = ({
                   label={{ value: selectedXColumn, position: 'bottom', offset: 20 }}
                   tick={{ fontSize: 12 }}
                   stroke="#6B7280"
+                  tickFormatter={(value) => Number(value).toFixed(2)}
                 />
                 <YAxis
                   type="number"
@@ -434,6 +435,7 @@ export const RegressionAnalysis: React.FC<RegressionAnalysisProps> = ({
                   label={{ value: selectedYColumn, angle: -90, position: 'left', offset: 20 }}
                   tick={{ fontSize: 12 }}
                   stroke="#6B7280"
+                  tickFormatter={(value) => Number(value).toFixed(2)}
                 />
                 <Tooltip
                   cursor={{ strokeDasharray: '3 3' }}
@@ -444,8 +446,8 @@ export const RegressionAnalysis: React.FC<RegressionAnalysisProps> = ({
                     padding: '8px 12px',
                     boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                   }}
-                  formatter={(value: any) => [value.toFixed(4)]}
-                  labelFormatter={(value) => `${selectedXColumn}: ${value.toFixed(4)}`}
+                  formatter={(value: any) => [Number(value).toFixed(2)]}
+                  labelFormatter={(value) => `${selectedXColumn}: ${Number(value).toFixed(2)}`}
                 />
                 <Legend
                   verticalAlign="top"
