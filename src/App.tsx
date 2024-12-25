@@ -8,6 +8,7 @@ import DataPreview from './components/DataPreview';
 import { ChartConfig, DataPoint } from './types';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { RegressionAnalysis } from './components/RegressionAnalysis';
 
 function App() {
   const [data, setData] = useState<DataPoint[]>([]);
@@ -21,11 +22,11 @@ function App() {
     showGrid: true,
   });
   const [showStats, setShowStats] = useState(false);
+  const [showRegression, setShowRegression] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [exporting, setExporting] = useState(false);
 
   const handleDataLoaded = (newData: DataPoint[]) => {
-    // Ensure numeric values are properly stored
     const processedData = newData.map(row => {
       const newRow = { ...row };
       Object.keys(row).forEach(key => {
@@ -42,7 +43,7 @@ function App() {
     
     if (processedData.length > 0) {
       const columns = Object.keys(processedData[0]);
-      setConfig((prev) => ({
+      setConfig(prev => ({
         ...prev,
         xAxis: columns[0],
         yAxis: columns[1] || columns[0],
@@ -205,6 +206,12 @@ function App() {
                       >
                         {showStats ? 'Hide Statistics' : 'Show Statistics'}
                       </button>
+                      <button
+                        onClick={() => setShowRegression(!showRegression)}
+                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                      >
+                        {showRegression ? 'Hide Regression' : 'Show Regression'}
+                      </button>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleExport('png')}
@@ -230,8 +237,15 @@ function App() {
                       </div>
                     </div>
                   </div>
-                  <div ref={chartContainerRef} className="bg-white p-4 rounded-lg">
+                  <div ref={chartContainerRef} data-chart-container className="bg-white p-4 rounded-lg shadow">
                     <Chart data={data} config={config} />
+                    {showRegression && (
+                      <RegressionAnalysis
+                        data={data}
+                        selectedXColumn={config.xAxis}
+                        selectedYColumn={config.yAxis}
+                      />
+                    )}
                   </div>
                 </div>
 
