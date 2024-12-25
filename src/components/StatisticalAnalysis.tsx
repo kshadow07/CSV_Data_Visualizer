@@ -134,11 +134,13 @@ const StatisticalAnalysis: React.FC<StatisticalAnalysisProps> = ({
                 ? Number(((value - stats.mean) / stats.std).toFixed(4))
                 : 0;
               break;
-            case 'normalize':
-              newRow[column] = stats.sum !== 0 
-                ? Number((value / stats.sum).toFixed(4))
+            case 'normalize': {
+              const range = stats.max - stats.min;
+              newRow[column] = range !== 0 
+                ? Number(((value - stats.min) / range).toFixed(4))
                 : 0;
               break;
+            }
             case 'minmax': {
               const range = stats.max - stats.min;
               newRow[column] = range !== 0 

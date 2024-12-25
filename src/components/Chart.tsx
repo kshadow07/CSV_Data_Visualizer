@@ -42,6 +42,17 @@ const Chart: React.FC<ChartProps> = ({ data, config }) => {
   const [yAxisMin, setYAxisMin] = useState<number | null>(null);
   const [yAxisMax, setYAxisMax] = useState<number | null>(null);
 
+  const formatNumber = (value: number) => {
+    return Math.round(value * 100) / 100;
+  };
+
+  const formatAxisTick = (value: any) => {
+    if (typeof value === 'number') {
+      return formatNumber(value);
+    }
+    return value;
+  };
+
   useEffect(() => {
     setStartIndex(0);
     setVisiblePoints(Math.min(100, data.length));
@@ -286,11 +297,13 @@ const Chart: React.FC<ChartProps> = ({ data, config }) => {
               dataKey={config.xAxis}
               height={40}
               tick={{ fontSize: 12 }}
+              tickFormatter={formatAxisTick}
             />
             <YAxis 
               domain={yDomain}
               tick={{ fontSize: 12 }}
               allowDataOverflow={true}
+              tickFormatter={formatAxisTick}
             />
             <Tooltip 
               contentStyle={{ 
@@ -299,6 +312,7 @@ const Chart: React.FC<ChartProps> = ({ data, config }) => {
                 borderRadius: '4px',
                 padding: '8px'
               }}
+              formatter={(value: any) => [formatNumber(value), config.yAxis]}
             />
             <Line
               type="monotone"
@@ -322,10 +336,12 @@ const Chart: React.FC<ChartProps> = ({ data, config }) => {
               dataKey={config.xAxis}
               height={40}
               tick={{ fontSize: 12 }}
+              tickFormatter={formatAxisTick}
             />
             <YAxis 
               domain={yDomain}
               tick={{ fontSize: 12 }}
+              tickFormatter={formatAxisTick}
             />
             <Tooltip 
               contentStyle={{ 
@@ -334,6 +350,7 @@ const Chart: React.FC<ChartProps> = ({ data, config }) => {
                 borderRadius: '4px',
                 padding: '8px'
               }}
+              formatter={(value: any) => [formatNumber(value), config.yAxis]}
             />
             <Bar dataKey={config.yAxis} fill={chartColor} />
           </BarChart>
@@ -351,10 +368,12 @@ const Chart: React.FC<ChartProps> = ({ data, config }) => {
               dataKey={config.xAxis}
               height={40}
               tick={{ fontSize: 12 }}
+              tickFormatter={formatAxisTick}
             />
             <YAxis 
               domain={yDomain}
               tick={{ fontSize: 12 }}
+              tickFormatter={formatAxisTick}
             />
             <Tooltip 
               contentStyle={{ 
@@ -363,6 +382,7 @@ const Chart: React.FC<ChartProps> = ({ data, config }) => {
                 borderRadius: '4px',
                 padding: '8px'
               }}
+              formatter={(value: any) => [formatNumber(value), config.yAxis]}
             />
             <Area
               type="monotone"
@@ -386,10 +406,12 @@ const Chart: React.FC<ChartProps> = ({ data, config }) => {
               dataKey={config.xAxis}
               height={40}
               tick={{ fontSize: 12 }}
+              tickFormatter={formatAxisTick}
             />
             <YAxis 
               domain={yDomain}
               tick={{ fontSize: 12 }}
+              tickFormatter={formatAxisTick}
             />
             <Tooltip 
               contentStyle={{ 
@@ -398,6 +420,7 @@ const Chart: React.FC<ChartProps> = ({ data, config }) => {
                 borderRadius: '4px',
                 padding: '8px'
               }}
+              formatter={(value: any) => [formatNumber(value), config.yAxis]}
             />
           </ScatterChart>
         );
